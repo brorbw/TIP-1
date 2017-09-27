@@ -102,7 +102,7 @@ object SignLattice extends FlatLattice[SignElement.Value] with LatticeOps {
   def eval[A](exp: AExpr, env: Map[ADeclaration, Element])(implicit declData: DeclarationData): Element = {
     exp match {
       case id: AIdentifier => env(id.declaration)
-      case num: ANumber => sign(num.value)
+      case num: ANumber    => sign(num.value)
       case bin: ABinaryOp =>
         bin.operator match {
           case Plus =>
@@ -118,12 +118,29 @@ object SignLattice extends FlatLattice[SignElement.Value] with LatticeOps {
           case Eqq =>
             eqq(eval(bin.left, env), eval(bin.right, env))
         }
-      case _: AInput => Top
-      case _: AUnaryOp[_] => NoPointers.LanguageRestrictionViolation(s"No pointers allowed in eval $exp")
+      case _: AInput        => Top
+      case _: AUnaryOp[_]   => NoPointers.LanguageRestrictionViolation(s"No pointers allowed in eval $exp")
       case _: ACallFuncExpr => NoCalls.LanguageRestrictionViolation(s"No calls allowed in eval $exp")
-      case _ => throw UnexpectedUnsupportedExpressionException(s"Unexpected expression $exp in eval")
+      case _                => throw UnexpectedUnsupportedExpressionException(s"Unexpected expression $exp in eval")
     }
   }
 
   case class UnexpectedUnsupportedExpressionException(msg: String) extends RuntimeException(msg)
+
+  def isMonotone(function: (SignLattice.Element, SignLattice.Element) => SignLattice.Element): Boolean = {
+    for (x <- signValues;
+         y <- signValues) {
+      for (z <- signValues if lub(x._1, z._1) == z._1) {
+        if (!(lub(function(x._1, y._1), function(z._1, y._1)) == function(z._1, y._1))) {
+          return false
+        }
+      }
+      for (z <- signValues if lub(y._1, z._1) == z._1) {
+        if (!(lub(function(x._1, y._1), function(x._1, z._1)) == function(x._1, z._1))) {
+          return false
+        }
+      }
+    }
+    return true
+  }
 }

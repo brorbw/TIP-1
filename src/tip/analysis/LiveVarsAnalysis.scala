@@ -25,16 +25,16 @@ abstract class LiveVarsAnalysis(cfg: IntraproceduralProgramCfg)(implicit declDat
       case _: CfgFunExitNode => lattice.sublattice.bottom
       case r: CfgStmtNode =>
         r.data match {
-          case cond: AExpr => ??? //<--- Complete here
+          case cond: ABinaryOp => s;
           case ass: AAssignStmt =>
             ass.left match {
-              case id: AIdentifier => ??? //<--- Complete here
-              case _ => ???
+              case id: AIdentifier => (s - declData(id)) ++ ass.right.appearingIds;
+              case _               => ???
             }
-          case varr: AVarStmt => ??? //<--- Complete here
-          case ret: AReturnStmt => ??? //<--- Complete here
-          case out: AOutputStmt => ??? //<--- Complete here
-          case _ => s
+          case varr: AVarStmt   => s -- varr.declIds;
+          case ret: AReturnStmt => s ++ ret.appearingIds;
+          case out: AOutputStmt => s ++ out.appearingIds;
+          case _                => s
         }
       case _ => s
     }

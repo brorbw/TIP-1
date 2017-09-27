@@ -64,33 +64,52 @@ class TypeAnalysis(program: AProgram)(implicit declData: DeclarationData) extend
   override def visit(node: AstNode, arg: Null): Unit = {
     log.verb(s"Visiting ${node.getClass.getSimpleName} at ${node.loc}")
     node match {
-      case program: AProgram => ??? // <--- Complete here
-      case _: ANumber => ??? // <--- Complete here
-      case _: AInput => ??? // <--- Complete here
-      case iff: AIfStmt => ??? // <--- Complete here
-      case out: AOutputStmt => ??? // <--- Complete here
-      case whl: AWhileStmt => ??? // <--- Complete here
-      case ass: AAssignStmt => ??? // <--- Complete here
+      case _: ANumber =>
+        unify(node, TipInt())
+      case _: AInput =>
+        unify(node, TipInt())
+      case iff: AIfStmt =>
+        unify(iff.guard, TipInt())
+      case out: AOutputStmt =>
+        unify(node, TipInt())
+      case whl: AWhileStmt =>
+        unify(whl.guard, TipInt())
+      case ass: AAssignStmt =>
+        ass.left match {
+          case aIdentifier: AIdentifier =>
+            unify(aIdentifier, ass.right)
+          case aDerefOp: AUnaryOp[DerefOp.type] =>
+            unify(aDerefOp.target, TipRef(ass.right))
+        }
       case bin: ABinaryOp =>
         bin.operator match {
-          case Eqq => ??? // <--- Complete here
-          case _ => ??? // <--- Complete here
+          case Eqq =>
+            unify(bin.left, bin.right)
+            unify(bin, TipInt())
+          case _ =>
+            unify(bin.left, TipInt())
+            unify(bin.right, TipInt())
+            unify(node, TipInt())
         }
       case un: AUnaryOp[_] =>
         un.operator match {
-          case RefOp => ??? // <--- Complete here
-          case DerefOp => ??? // <--- Complete here
+          case RefOp =>
+            unify(node, TipRef(un.target))
+          case DerefOp =>
+            unify(un.target, TipRef(un))
         }
-      case _: AAlloc => ??? // <--- Complete here
-      case _: ANull => ??? // <--- Complete here
-      case fun: AFunDeclaration => ??? // <--- Complete here
-      case call: ACallFuncExpr => ??? // <--- Complete here
-      case _: AReturnStmt =>
+      case _: AAlloc =>
+        unify(node, TipRef(TipTypeOps.makeAlpha(node)))
+      case _: ANull =>
+        unify(node, TipRef(TipTypeOps.makeAlpha(node)))
+      case fun: AFunDeclaration =>
+        unify(fun, TipFunction(fun.args.map(TipVar), fun.stmts.ret.value))
+      case call: ACallFuncExpr =>
+        unify(call.targetFun, TipFunction(call.args.map(TipType.ast2typevar), node))
       case _ =>
     }
     visitChildren(node, null)
   }
-
   private def unify(t1: Term[TipType], t2: Term[TipType]): Unit = {
     log.verb(s"Generating constraint $t1 = $t2")
     solver.unify(t1, t2)

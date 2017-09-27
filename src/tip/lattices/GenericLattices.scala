@@ -93,7 +93,7 @@ class FlatLattice[X] extends Lattice {
     */
   implicit def unlift(a: Element): X = a match {
     case FlatEl(n) => n
-    case _ => throw new IllegalArgumentException(s"cannot unlift $a")
+    case _         => throw new IllegalArgumentException(s"cannot unlift $a")
   }
 
   override def bottom: Element = Bot
@@ -147,9 +147,9 @@ class PowersetLattice[A](ch: A => Boolean) extends Lattice {
 
   type Element = Set[A]
 
-  override def bottom: Element = ??? //<--- Complete here
+  override def bottom: Element = Set(): Element
 
-  override def lub(x: Element, y: Element) = ??? //<--- Complete here
+  override def lub(x: Element, y: Element) = x | y
 }
 
 /**
@@ -184,8 +184,8 @@ class LiftLattice[+L <: Lattice](val sublattice: L) extends Lattice {
 
   override def lub(x: Element, y: Element) = {
     (x, y) match {
-      case (Bottom, t) => t
-      case (t, Bottom) => t
+      case (Bottom, t)        => t
+      case (t, Bottom)        => t
       case (Lift(a), Lift(b)) => Lift(sublattice.lub(a, b))
     }
   }
@@ -203,6 +203,6 @@ class LiftLattice[+L <: Lattice](val sublattice: L) extends Lattice {
     */
   implicit def unlift(x: Element): sublattice.Element = x match {
     case Lift(s) => s
-    case Bottom => throw new IllegalArgumentException("Cannot unlift bottom")
+    case Bottom  => throw new IllegalArgumentException("Cannot unlift bottom")
   }
 }

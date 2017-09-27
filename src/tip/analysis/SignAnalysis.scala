@@ -27,16 +27,15 @@ trait IntraprocSignAnalysisFunctions {
     */
   def localTransfer(n: CfgNode, s: statelattice.Element): statelattice.Element = {
     NoPointers.assertContainsNode(n.data)
-    NoCalls.assertContainsNode(n.data)
+    //NoCalls.assertContainsNode(n.data)
     n match {
       case r: CfgStmtNode =>
         r.data match {
           // var declarations
-          case varr: AVarStmt => ??? //<--- Complete here
-
+          case varr: AVarStmt => var q = s; varr.declIds.map((x) => { q += (x -> SignLattice.top) }); q
           // assignments
-          case AAssignStmt(id: AIdentifier, right, _) => ??? //<--- Complete here
-          case AAssignStmt(_: AUnaryOp[_], _, _) => NoPointers.LanguageRestrictionViolation(s"${r.data} not allowed")
+          case AAssignStmt(id: AIdentifier, right, _) => var q = s; q + (declData(id) -> SignLattice.eval(right, q))
+          case AAssignStmt(_: AUnaryOp[_], _, _)      => NoPointers.LanguageRestrictionViolation(s"${r.data} not allowed")
 
           // all others: like no-ops
           case _ => s
@@ -81,11 +80,13 @@ trait InterprocSignAnalysisFunctions extends MapLiftLatticeSolver[CfgNode] with 
 
     n match {
       // function entry nodes
-      case funentry: CfgFunEntryNode => ??? //<--- Complete here
-
+      case funentry: CfgFunEntryNode =>
+        funentry.pred.foldLeft(lattice.sublattice.bottom) { (acc, pred) =>
+          lub(evalArgs(funentry.data.args, pred.asInstanceOf[CfgCallNode].data.right.asInstanceOf[ACallFuncExpr].args, x(n)), acc)
+        }
       // after-call nodes
-      case aftercall: CfgAfterCallNode => ??? //<--- Complete here
-
+      case aftercall: CfgAfterCallNode =>
+        lattice.sublattice.bottom + (declData(aftercall.data.left.asInstanceOf[AIdentifier]) -> x(aftercall.pred.head)(AstOps.returnId))
       // return node
       case CfgStmtNode(_, _, _, ret: AReturnStmt) =>
         val j = join(n, x)
